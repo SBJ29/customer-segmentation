@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Customer Segmentation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;
+  --surface:#13161e;
+  --surface2:#1a1e28;
+  --surface3:#212535;
+  --border:#2a2f3d;
+  --border2:#363c4e;
+  --text:#e8eaf0;
+  --text2:#8b91a6;
+  --text3:#555c74;
+  --teal:#00c896;
+  --teal-dim:#003d2e;
+  --teal-mid:#00876a;
+  --blue:#4a9eff;
+  --blue-dim:#0d2640;
+  --amber:#f5a623;
+  --amber-dim:#3d2800;
+  --red:#ff5b5b;
+  --red-dim:#3d0f0f;
+  --purple:#9d7bff;
+  --purple-dim:#1e1440;
+  --font:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --radius:10px;
+  --radius-lg:14px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden}
+/* Layout */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:0.25rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{padding:2rem;overflow:auto}
+/* Sidebar */
+.logo{font-size:15px;font-weight:600;letter-spacing:-0.02em;padding:0.5rem 0.75rem 1.25rem;color:var(--text);border-bottom:1px solid var(--border);margin-bottom:0.75rem}
+.logo span{color:var(--teal)}
+.nav-label{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);padding:0.5rem 0.75rem 0.25rem}
+.nav-item{display:flex;align-items:center;gap:10px;padding:0.5rem 0.75rem;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;border:1px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface3);color:var(--teal);border-color:var(--border2)}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* Segments sidebar */
+.seg-mini{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border)}
+.seg-mini-item{display:flex;align-items:center;gap:8px;padding:0.4rem 0.5rem;border-radius:8px;cursor:pointer;transition:background 0.15s;font-size:12px;color:var(--text2)}
+.seg-mini-item:hover{background:var(--surface2)}
+.seg-mini-item.active{background:var(--surface3);color:var(--text)}
+.seg-mini-bar-wrap{flex:1;background:var(--border);border-radius:2px;height:3px;overflow:hidden}
+.seg-mini-bar{height:100%;border-radius:2px;transition:width 0.4s ease}
+/* Header */
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.header-title{font-size:24px;font-weight:600;letter-spacing:-0.03em;line-height:1.2}
+.header-sub{font-size:13px;color:var(--text2);margin-top:4px}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3px}
+.tab{padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);transition:all 0.15s;border:none;background:transparent}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--surface3);color:var(--text);border:1px solid var(--border2)}
+/* KPI row */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:50%;opacity:0.06;transform:translate(20px,-20px)}
+.kpi.teal::before{background:var(--teal)}
+.kpi.blue::before{background:var(--blue)}
+.kpi.amber::before{background:var(--amber)}
+.kpi.red::before{background:var(--red)}
+.kpi-label{font-size:11px;color:var(--text3);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:600;letter-spacing:-0.03em;line-height:1}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:6px}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px}
+.badge.up{background:rgba(0,200,150,0.12);color:var(--teal)}
+.badge.down{background:rgba(255,91,91,0.12);color:var(--red)}
+/* Cards grid */
+.seg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem}
+.seg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.seg-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;opacity:0;transition:opacity 0.2s}
+.seg-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.seg-card.active{border-color:var(--accent-color,var(--teal))}
+.seg-card.active::after{opacity:1;background:var(--accent-color,var(--teal))}
+.seg-icon{font-size:20px;margin-bottom:8px}
+.seg-name{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+.seg-count{font-size:22px;font-weight:600;letter-spacing:-0.03em}
+.seg-pct{font-size:11px;color:var(--text3);margin-left:4px;font-weight:400}
+.seg-meta{display:flex;gap:8px;margin-top:8px;font-size:11px;color:var(--text3)}
+.seg-meta span{display:flex;align-items:center;gap:3px}
+/* Trend sparkline */
+.sparkline{display:block;margin-top:8px}
+/* Detail panel */
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 200px;gap:1.5rem;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.detail-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.detail-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:1rem}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.metric-box{background:var(--surface2);border-radius:var(--radius);padding:0.75rem;text-align:center}
+.metric-box .val{font-size:18px;font-weight:600;font-family:var(--mono);letter-spacing:-0.02em}
+.metric-box .lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+.list-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:4px 0}
+.list-item::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.action-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:4px 0}
+.action-arrow{font-family:var(--mono);font-size:11px;opacity:0.6}
+/* Charts area */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem}
+.chart-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.chart-sub{font-size:11px;color:var(--text3);margin-bottom:1rem}
+.chart-wrap{position:relative;width:100%}
+/* Scatter */
+#scatterCanvas{cursor:crosshair}
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;padding:0.6rem 0.75rem;font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)}
+.data-table td{padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);color:var(--text2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface2)}
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:500}
+/* Distribution */
+.dist-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dist-label{width:110px;font-size:12px;color:var(--text2);flex-shrink:0;text-align:right}
+.dist-bar-wrap{flex:1;background:var(--border);border-radius:3px;height:20px;overflow:hidden;position:relative}
+.dist-bar{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:500;transition:width 0.6s cubic-bezier(0.25,1,0.5,1)}
+.dist-count{width:50px;font-size:11px;color:var(--text3);font-family:var(--mono);text-align:right}
+/* Radar */
+#radarCanvas{display:block;margin:0 auto}
+/* Responsive */
+@media(max-width:1100px){
+  .seg-grid{grid-template-columns:repeat(3,1fr)}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .charts-grid{grid-template-columns:1fr}
+  .detail-panel{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .seg-grid{grid-template-columns:repeat(2,1fr)}
+  .detail-panel{grid-template-columns:1fr}
+}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+/* View panels */
+.view{display:none}
+.view.active{display:block}
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer;padding:3px 0}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+/* Category bars */
+.cat-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:12px}
+.cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.cat-col .cat-header{font-size:11px;font-weight:500;margin-bottom:10px;text-align:center}
+.cat-bar-item{margin-bottom:7px}
+.cat-bar-name{font-size:10px;color:var(--text3);margin-bottom:3px}
+.cat-bar-track{background:var(--border);border-radius:2px;height:16px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:5px;font-size:9px;font-weight:500;transition:width 0.5s ease}
+/* Python tab */
+.code-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;font-family:var(--mono);font-size:12px;line-height:1.8;overflow-x:auto;color:#c9d1d9}
+.code-block .kw{color:#ff79c6}
+.code-block .fn{color:#50fa7b}
+.code-block .st{color:#f1fa8c}
+.code-block .cm{color:#6272a4}
+.code-block .nm{color:#8be9fd}
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:12px}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal-dim);color:var(--teal);font-size:11px;font-weight:600;font-family:var(--mono);margin-bottom:8px}
+.step-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.step-desc{font-size:12px;color:var(--text2);margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">Segment<span>IQ</span></div>
+  <div class="nav-label">Views</div>
+  <div class="nav-item active" onclick="switchView('overview',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Overview
+  </div>
+  <div class="nav-item" onclick="switchView('scatter',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="16" r="2"/></svg>
+    Cluster Map
+  </div>
+  <div class="nav-item" onclick="switchView('categories',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v4H3zM3 10h11v4H3zM3 17h7v4H3z"/></svg>
+    Categories
+  </div>
+  <div class="nav-item" onclick="switchView('trends',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Trends
+  </div>
+  <div class="nav-item" onclick="switchView('python',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    Python Code
+  </div>
+
+  <div class="nav-label" style="margin-top:1rem">Segments</div>
+  <div id="segSidebar"></div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="header">
+    <div>
+      <div class="header-title">Customer Segmentation</div>
+      <div class="header-sub">RFM Analysis · 3,837 customers · June 2025</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="periodSelect" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:var(--radius);font-size:12px;font-family:var(--font)">
+        <option>Last 6 months</option>
+        <option>Last 12 months</option>
+        <option>YTD 2025</option>
+      </select>
+      <button style="background:var(--teal);color:#000;border:none;padding:7px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">Export CSV</button>
+    </div>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-grid">
+    <div class="kpi teal">
+      <div class="kpi-label">Total customers</div>
+      <div class="kpi-val">3,837</div>
+      <div class="kpi-sub"><span class="badge up">↑ 8.2%</span> vs last period</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Avg customer LTV</div>
+      <div class="kpi-val">$14,360</div>
+      <div class="kpi-sub"><span class="badge up">↑ 12.4%</span> YoY</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Champion share</div>
+      <div class="kpi-val">22%</div>
+      <div class="kpi-sub"><span class="badge up">↑ 1.4pp</span> MoM</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">At-risk customers</div>
+      <div class="kpi-val">523</div>
+      <div class="kpi-sub"><span class="badge down">↑ 2.1%</span> needs action</div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="view-overview" class="view active">
+    <div class="seg-grid" id="segCards"></div>
+    <div id="detailPanel" style="display:none"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Segment distribution</div>
+        <div class="chart-sub">Share of total customer base</div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="donutChart" role="img" aria-label="Donut chart showing 5 customer segments by percentage"></canvas>
+        </div>
+        <div class="legend" id="donutLegend" style="margin-top:12px;margin-bottom:0"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Revenue contribution by segment</div>
+        <div class="chart-sub">Estimated annual revenue ($M)</div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="revenueChart" role="img" aria-label="Bar chart of annual revenue per segment"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:12px">
+      <div class="chart-title">Segment comparison — RFM metrics</div>
+      <div class="chart-sub">Normalized scores across all five segments</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="radarChart" role="img" aria-label="Radar chart comparing RFM scores for each segment"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Customer distribution by segment</div>
+      <div class="chart-sub">Absolute count and share</div>
+      <div id="distBars"></div>
+    </div>
+  </div>
+
+  <!-- SCATTER -->
+  <div id="view-scatter" class="view">
+    <div class="chart-card" style="margin-bottom:12px">
+      <div class="chart-title">Frequency vs. Average Spend — Cluster Map</div>
+      <div class="chart-sub">Bubble size = Customer Lifetime Value · Click legend to filter</div>
+      <div class="legend" id="scatterLegend"></div>
+      <div class="chart-wrap" style="height:420px">
+        <canvas id="scatterCanvas" role="img" aria-label="Scatter plot of purchase frequency vs average spend, colored by segment"></canvas>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:6px;padding:0 50px">
+        <span>← Low frequency</span>
+        <span>High frequency →</span>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Recency vs. Monetary — Bubble Chart</div>
+      <div class="chart-sub">Days since last purchase vs. total spend · Bubble = order frequency</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="bubbleChart" role="img" aria-label="Bubble chart of recency vs monetary value, sized by frequency"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div id="view-categories" class="view">
+    <div class="cat-section">
+      <div class="chart-title" style="margin-bottom:4px">Category affinity by segment</div>
+      <div class="chart-sub" style="margin-bottom:1.25rem">% of segment spending in each product category</div>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Category heatmap — segment × category spend share</div>
+      <div class="chart-sub">Darker = higher affinity</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="heatmapChart" role="img" aria-label="Heatmap of segment vs category spending affinity"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div id="view-trends" class="view">
+    <div class="chart-card" style="margin-bottom:12px">
+      <div class="chart-title">Segment size over time (6 months)</div>
+      <div class="chart-sub">Monthly customer count per segment</div>
+      <div class="chart-wrap" style="height:320px">
+        <canvas id="trendChart" role="img" aria-label="Line chart of segment sizes over 6 months"></canvas>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Average spend trend</div>
+        <div class="chart-sub">Monthly AOV by segment ($)</div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="spendTrend" role="img" aria-label="Line chart of average spend by segment over time"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Segment migration (last 90 days)</div>
+        <div class="chart-sub">Customers moving between segments</div>
+        <div id="migrationTable" style="margin-top:0.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PYTHON CODE -->
+  <div id="view-python" class="view">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">Install dependencies</div>
+      <div class="step-desc">Required Python libraries for the full segmentation pipeline.</div>
+      <div class="code-block"><span class="cm"># pip install these first</span>
+pip install pandas numpy scikit-learn matplotlib seaborn plotly kneed</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">Load and prepare transaction data</div>
+      <div class="step-desc">Load your CSV of transactions and build the RFM feature matrix.</div>
+      <div class="code-block"><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+<span class="cm"># Load transactions</span>
+df = pd.<span class="fn">read_csv</span>(<span class="st">'transactions.csv'</span>, parse_dates=[<span class="st">'order_date'</span>])
+TODAY = pd.Timestamp(<span class="st">'2025-06-01'</span>)
+
+<span class="cm"># Build RFM table</span>
+rfm = df.<span class="fn">groupby</span>(<span class="st">'customer_id'</span>).<span class="fn">agg</span>(
+    recency=(<span class="st">'order_date'</span>, <span class="kw">lambda</span> x: (TODAY - x.<span class="fn">max</span>()).days),
+    frequency=(<span class="st">'order_id'</span>, <span class="st">'count'</span>),
+    monetary=(<span class="st">'revenue'</span>, <span class="st">'sum'</span>)
+).<span class="fn">reset_index</span>()
+
+<span class="fn">print</span>(rfm.<span class="fn">describe</span>())</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">Feature scaling & optimal K selection</div>
+      <div class="step-desc">Standardize features then use the elbow method to find optimal cluster count.</div>
+      <div class="code-block"><span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.cluster <span class="kw">import</span> KMeans
+<span class="kw">from</span> kneed <span class="kw">import</span> KneeLocator
+
+scaler = <span class="nm">StandardScaler</span>()
+X = scaler.<span class="fn">fit_transform</span>(rfm[[<span class="st">'recency'</span>, <span class="st">'frequency'</span>, <span class="st">'monetary'</span>]])
+
+<span class="cm"># Elbow method</span>
+inertias = []
+K_range = <span class="fn">range</span>(2, 11)
+<span class="kw">for</span> k <span class="kw">in</span> K_range:
+    km = <span class="nm">KMeans</span>(n_clusters=k, random_state=42, n_init=10)
+    km.<span class="fn">fit</span>(X)
+    inertias.<span class="fn">append</span>(km.inertia_)
+
+kl = <span class="nm">KneeLocator</span>(K_range, inertias, curve=<span class="st">'convex'</span>, direction=<span class="st">'decreasing'</span>)
+optimal_k = kl.knee
+<span class="fn">print</span>(<span class="fn">f</span><span class="st">"Optimal K: {optimal_k}"</span>)</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-title">Fit K-Means and label segments</div>
+      <div class="step-desc">Cluster customers and assign business-friendly segment names based on RFM scores.</div>
+      <div class="code-block"><span class="cm"># Fit final model</span>
+kmeans = <span class="nm">KMeans</span>(n_clusters=5, random_state=42, n_init=10)
+rfm[<span class="st">'cluster'</span>] = kmeans.<span class="fn">fit_predict</span>(X)
+
+<span class="cm"># Score each cluster to assign labels</span>
+<span class="kw">def</span> <span class="fn">label_cluster</span>(row):
+    r, f, m = row[<span class="st">'recency'</span>], row[<span class="st">'frequency'</span>], row[<span class="st">'monetary'</span>]
+    <span class="kw">if</span> r < 30 <span class="kw">and</span> f > 6 <span class="kw">and</span> m > 3000:
+        <span class="kw">return</span> <span class="st">'Champions'</span>
+    <span class="kw">elif</span> r < 60 <span class="kw">and</span> f > 3:
+        <span class="kw">return</span> <span class="st">'Loyal Customers'</span>
+    <span class="kw">elif</span> r < 90 <span class="kw">and</span> f >= 1:
+        <span class="kw">return</span> <span class="st">'Potential Loyalists'</span>
+    <span class="kw">elif</span> r > 60 <span class="kw">and</span> f > 2:
+        <span class="kw">return</span> <span class="st">'At Risk'</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="st">'New Customers'</span>
+
+rfm[<span class="st">'segment'</span>] = rfm.<span class="fn">apply</span>(label_cluster, axis=1)
+<span class="fn">print</span>(rfm[<span class="st">'segment'</span>].<span class="fn">value_counts</span>())</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">5</div>
+      <div class="step-title">Visualize results with Plotly</div>
+      <div class="step-desc">Create an interactive 3D scatter plot of your RFM clusters.</div>
+      <div class="code-block"><span class="kw">import</span> plotly.express <span class="kw">as</span> px
+
+fig = px.<span class="fn">scatter_3d</span>(
+    rfm, x=<span class="st">'recency'</span>, y=<span class="st">'frequency'</span>, z=<span class="st">'monetary'</span>,
+    color=<span class="st">'segment'</span>, opacity=0.7, size_max=8,
+    color_discrete_map={
+        <span class="st">'Champions'</span>: <span class="st">'#00c896'</span>,
+        <span class="st">'Loyal Customers'</span>: <span class="st">'#4a9eff'</span>,
+        <span class="st">'Potential Loyalists'</span>: <span class="st">'#f5a623'</span>,
+        <span class="st">'At Risk'</span>: <span class="st">'#ff5b5b'</span>,
+        <span class="st">'New Customers'</span>: <span class="st">'#9d7bff'</span>
+    },
+    title=<span class="st">'Customer Segments — 3D RFM Space'</span>,
+    template=<span class="st">'plotly_dark'</span>
+)
+fig.<span class="fn">show</span>()</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">6</div>
+      <div class="step-title">Export segmented data</div>
+      <div class="step-desc">Save results for CRM upload or further marketing automation.</div>
+      <div class="code-block"><span class="cm"># Export full segmented customer list</span>
+rfm.<span class="fn">to_csv</span>(<span class="st">'customers_segmented.csv'</span>, index=False)
+
+<span class="cm"># Segment summary table</span>
+summary = rfm.<span class="fn">groupby</span>(<span class="st">'segment'</span>).<span class="fn">agg</span>(
+    count=(<span class="st">'customer_id'</span>, <span class="st">'count'</span>),
+    avg_recency=(<span class="st">'recency'</span>, <span class="st">'mean'</span>),
+    avg_frequency=(<span class="st">'frequency'</span>, <span class="st">'mean'</span>),
+    avg_monetary=(<span class="st">'monetary'</span>, <span class="st">'mean'</span>)
+).<span class="fn">round</span>(1)
+
+<span class="fn">print</span>(summary.<span class="fn">to_string</span>())</div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+const SEGS = [
+  { id:'champions',    label:'Champions',         icon:'🏆', count:842,  pct:22, spend:4820, freq:8.4, recency:6,  clv:32400, color:'#00c896', dim:'#003d2e', text:'#00c896',
+    desc:'High spend, high frequency, very recent buyers. Your most valuable brand advocates.',
+    traits:['Loyal brand advocates','Early product adopters','Highest AOV in base'],
+    actions:['Reward with VIP/loyalty perks','Request reviews & referrals','Upsell premium tiers'],
+    rfm:[92,88,95,90,72] },
+  { id:'loyal',        label:'Loyal Customers',   icon:'⭐', count:1124, pct:29, spend:2340, freq:5.1, recency:18, clv:18700, color:'#4a9eff', dim:'#0d2640', text:'#4a9eff',
+    desc:'Regular buyers with consistent spend. The backbone of your recurring revenue.',
+    traits:['Repeat purchasers','Category-specific loyalty','Moderate AOV'],
+    actions:['Launch tiered loyalty program','Cross-sell adjacent categories','Personalized recommendations'],
+    rfm:[74,78,70,85,65] },
+  { id:'potential',    label:'Potential Loyalists',icon:'🌱', count:964,  pct:25, spend:1180, freq:2.3, recency:32, clv:9200,  color:'#f5a623', dim:'#3d2800', text:'#f5a623',
+    desc:'Recent buyers with moderate spend. Strong conversion potential into loyal customers.',
+    traits:['Price & promotion sensitive','Growing engagement','2nd purchase is critical'],
+    actions:['Triggered onboarding series','Targeted discount on repeat','Re-engagement drip emails'],
+    rfm:[80,45,42,55,82] },
+  { id:'atrisk',       label:'At Risk',            icon:'⚠️', count:523,  pct:14, spend:1890, freq:3.8, recency:78, clv:6100,  color:'#ff5b5b', dim:'#3d0f0f', text:'#ff5b5b',
+    desc:'Previously active, high-value customers who haven\'t purchased recently. Win-back priority.',
+    traits:['Lapsed buyers','High historical value','Responsive to special offers'],
+    actions:['Win-back email campaign','Exclusive comeback offer','Feedback & exit survey'],
+    rfm:[25,58,62,68,30] },
+  { id:'newcustomers', label:'New Customers',      icon:'✨', count:384,  pct:10, spend:620,  freq:1.0, recency:12, clv:1400,  color:'#9d7bff', dim:'#1e1440', text:'#9d7bff',
+    desc:'Just acquired. The 90-day window is critical — convert them to repeat buyers now.',
+    traits:['First-time buyers','Exploring the catalog','High churn risk if ignored'],
+    actions:['Automated welcome series','First repeat incentive (15%)','Product education content'],
+    rfm:[85,18,22,20,90] },
+];
+
+const MONTHLY = [
+  {m:'Jan', champions:720,loyal:1050,potential:870,atrisk:480,newcustomers:310},
+  {m:'Feb', champions:748,loyal:1080,potential:900,atrisk:495,newcustomers:330},
+  {m:'Mar', champions:785,loyal:1095,potential:920,atrisk:510,newcustomers:350},
+  {m:'Apr', champions:800,loyal:1100,potential:935,atrisk:515,newcustomers:360},
+  {m:'May', champions:820,loyal:1112,potential:948,atrisk:520,newcustomers:372},
+  {m:'Jun', champions:842,loyal:1124,potential:964,atrisk:523,newcustomers:384},
+];
+
+const CATEGORIES = [
+  {cat:'Electronics', champions:38,loyal:24,potential:18,atrisk:12,newcustomers:8},
+  {cat:'Apparel',     champions:20,loyal:32,potential:25,atrisk:15,newcustomers:22},
+  {cat:'Home & Garden',champions:28,loyal:18,potential:22,atrisk:20,newcustomers:14},
+  {cat:'Beauty',      champions:14,loyal:26,potential:35,atrisk:18,newcustomers:28},
+  {cat:'Sports',      champions:22,loyal:20,potential:18,atrisk:24,newcustomers:16},
+  {cat:'Food & Drink',champions:18,loyal:22,potential:28,atrisk:30,newcustomers:34},
+];
+
+const MIGRATION = [
+  {from:'Champions',    to:'Loyal Customers',  count:42},
+  {from:'Loyal Customers',to:'At Risk',        count:87},
+  {from:'Potential',    to:'Loyal Customers',  count:134},
+  {from:'At Risk',      to:'Champions',        count:18},
+  {from:'New Customers',to:'Potential',        count:210},
+];
+
+let activeSegment = null;
+let scatterFilter = null;
+
+// ─── INIT ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  buildSidebar();
+  buildSegCards();
+  buildDistBars();
+  buildCatGrid();
+  buildMigrationTable();
+  initCharts();
+});
+
+// ─── NAVIGATION ─────────────────────────────────────────
+function switchView(id, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────
+function buildSidebar() {
+  const wrap = document.getElementById('segSidebar');
+  wrap.innerHTML = SEGS.map(s => `
+    <div class="seg-mini-item ${activeSegment===s.id?'active':''}" onclick="toggleSeg('${s.id}')">
+      <span>${s.icon}</span>
+      <span style="flex:1;font-size:11px">${s.label}</span>
+      <div class="seg-mini-bar-wrap">
+        <div class="seg-mini-bar" style="width:${s.pct*3.3}%;background:${s.color}"></div>
+      </div>
+      <span style="font-size:10px;font-family:var(--mono);color:var(--text3);width:24px;text-align:right">${s.pct}%</span>
+    </div>
+  `).join('');
+}
+
+// ─── SEG CARDS ───────────────────────────────────────────
+function buildSegCards() {
+  const grid = document.getElementById('segCards');
+  grid.innerHTML = SEGS.map(s => `
+    <div class="seg-card ${activeSegment===s.id?'active':''}" 
+         style="--accent-color:${s.color}" 
+         onclick="toggleSeg('${s.id}')">
+      <div class="seg-icon">${s.icon}</div>
+      <div class="seg-name">${s.label}</div>
+      <div class="seg-count">${s.count.toLocaleString()}<span class="seg-pct">${s.pct}%</span></div>
+      <svg class="sparkline" width="100%" height="28" viewBox="0 0 100 28">
+        ${buildSparkline(s.id, s.color)}
+      </svg>
+      <div class="seg-meta">
+        <span style="color:${s.color}">$${s.spend.toLocaleString()}</span>
+        <span>·</span>
+        <span>${s.freq}x/yr</span>
+        <span>·</span>
+        <span>${s.recency}d</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildSparkline(segId, color) {
+  const vals = MONTHLY.map(m => m[segId]);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * 100;
+    const y = 26 - ((v - min) / (max - min || 1)) * 22;
+    return `${x},${y}`;
+  }).join(' ');
+  return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>`;
+}
+
+// ─── TOGGLE SEGMENT ──────────────────────────────────────
+function toggleSeg(id) {
+  activeSegment = activeSegment === id ? null : id;
+  buildSegCards();
+  buildSidebar();
+  renderDetailPanel();
+}
+
+function renderDetailPanel() {
+  const panel = document.getElementById('detailPanel');
+  if (!activeSegment) { panel.style.display = 'none'; return; }
+  const s = SEGS.find(x => x.id === activeSegment);
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="detail-panel" style="border-color:${s.color}22;border-left:3px solid ${s.color}">
+      <div>
+        <div class="detail-title">${s.icon} ${s.label}</div>
+        <div class="detail-desc">${s.desc}</div>
+        <div class="metric-row">
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">${s.count.toLocaleString()}</div>
+            <div class="lbl">Customers</div>
+          </div>
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">$${s.spend.toLocaleString()}</div>
+            <div class="lbl">Avg spend</div>
+          </div>
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">${s.freq}×</div>
+            <div class="lbl">Frequency</div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">${s.recency}d</div>
+            <div class="lbl">Recency</div>
+          </div>
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">$${(s.clv/1000).toFixed(1)}k</div>
+            <div class="lbl">Avg CLV</div>
+          </div>
+          <div class="metric-box">
+            <div class="val" style="color:${s.color}">${s.pct}%</div>
+            <div class="lbl">Base share</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Behavioral traits</div>
+        ${s.traits.map(t => `<div class="list-item" style="color:var(--text)"><span style="background:${s.color};width:4px;height:4px;border-radius:50%;display:inline-block"></span>&nbsp;&nbsp;${t}</div>`).join('')}
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;margin-top:14px">Recommended actions</div>
+        ${s.actions.map(a => `<div class="action-item"><span class="action-arrow" style="color:${s.color}">→</span>${a}</div>`).join('')}
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">RFM Profile</div>
+        <canvas id="radarMini" width="180" height="180"></canvas>
+      </div>
+    </div>`;
+  drawRadarMini(s);
+}
+
+function drawRadarMini(seg) {
+  const canvas = document.getElementById('radarMini');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 180, H = 180, cx = 90, cy = 90, R = 65;
+  const axes = ['Recency','Freq','Spend','Loyalty','Growth'];
+  ctx.clearRect(0, 0, W, H);
+  const toXY = (angle, r) => ({ x: cx + r * Math.cos(angle - Math.PI/2), y: cy + r * Math.sin(angle - Math.PI/2) });
+  [0.25, 0.5, 0.75, 1].forEach(scale => {
+    ctx.beginPath();
+    axes.forEach((_, i) => {
+      const { x, y } = toXY((i / axes.length) * 2 * Math.PI, R * scale);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+  axes.forEach((_, i) => {
+    const { x, y } = toXY((i / axes.length) * 2 * Math.PI, R);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.stroke();
+  });
+  ctx.beginPath();
+  seg.rfm.forEach((v, i) => {
+    const { x, y } = toXY((i / axes.length) * 2 * Math.PI, (v / 100) * R);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = seg.color + '33';
+  ctx.fill();
+  ctx.strokeStyle = seg.color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  axes.forEach((label, i) => {
+    const { x, y } = toXY((i / axes.length) * 2 * Math.PI, R + 14);
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '9px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+  });
+}
+
+// ─── DIST BARS ───────────────────────────────────────────
+function buildDistBars() {
+  const wrap = document.getElementById('distBars');
+  const max = Math.max(...SEGS.map(s => s.count));
+  wrap.innerHTML = SEGS.map(s => `
+    <div class="dist-row">
+      <div class="dist-label">${s.icon} ${s.label}</div>
+      <div class="dist-bar-wrap">
+        <div class="dist-bar" style="width:${(s.count/max)*100}%;background:${s.color}22;color:${s.color}">
+          ${s.count.toLocaleString()}
+        </div>
+      </div>
+      <div class="dist-count">${s.pct}%</div>
+    </div>
+  `).join('');
+}
+
+// ─── CATEGORY GRID ───────────────────────────────────────
+function buildCatGrid() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = SEGS.map(s => {
+    const maxVal = Math.max(...CATEGORIES.map(c => c[s.id]));
+    return `
+      <div class="cat-col">
+        <div class="cat-header" style="color:${s.color}">${s.icon} ${s.label}</div>
+        ${CATEGORIES.map(c => `
+          <div class="cat-bar-item">
+            <div class="cat-bar-name">${c.cat}</div>
+            <div class="cat-bar-track">
+              <div class="cat-bar-fill" style="width:${(c[s.id]/maxVal)*100}%;background:${s.color}33;color:${s.color}">
+                ${c[s.id]}%
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  }).join('');
+}
+
+// ─── MIGRATION TABLE ─────────────────────────────────────
+function buildMigrationTable() {
+  const wrap = document.getElementById('migrationTable');
+  wrap.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>From</th><th>To</th><th>Customers</th><th>Trend</th></tr></thead>
+      <tbody>${MIGRATION.map(m => {
+        const seg = SEGS.find(s => s.label.includes(m.from.split(' ')[0]));
+        const toSeg = SEGS.find(s => s.label.includes(m.to.split(' ')[0]));
+        return `<tr>
+          <td><span style="color:${seg?.color||'#888'}">${m.from}</span></td>
+          <td><span style="color:${toSeg?.color||'#888'}">${m.to}</span></td>
+          <td><span style="font-family:var(--mono)">${m.count}</span></td>
+          <td><span class="pill" style="background:${toSeg?.dim||'#222'};color:${toSeg?.color||'#888'}">↗ migrated</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// ─── CHARTS ──────────────────────────────────────────────
+function initCharts() {
+  buildDonut();
+  buildRevenue();
+  buildRadar();
+  buildScatter();
+  buildBubble();
+  buildHeatmap();
+  buildTrend();
+  buildSpendTrend();
+}
+
+// Donut
+function buildDonut() {
+  const legendEl = document.getElementById('donutLegend');
+  legendEl.innerHTML = SEGS.map(s => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${s.color}"></div>
+      ${s.icon} ${s.label} — ${s.pct}%
+    </div>`).join('');
+
+  new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: SEGS.map(s => s.label),
+      datasets: [{
+        data: SEGS.map(s => s.pct),
+        backgroundColor: SEGS.map(s => s.color + 'cc'),
+        borderColor: SEGS.map(s => s.color),
+        borderWidth: 1.5,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}% (${SEGS[ctx.dataIndex].count.toLocaleString()} customers)` }
+        }
+      }
+    }
+  });
+}
+
+// Revenue bar
+function buildRevenue() {
+  const revenues = SEGS.map(s => Math.round((s.count * s.spend) / 1e6 * 10) / 10);
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels: SEGS.map(s => s.label),
+      datasets: [{
+        label: 'Revenue ($M)',
+        data: revenues,
+        backgroundColor: SEGS.map(s => s.color + '99'),
+        borderColor: SEGS.map(s => s.color),
+        borderWidth: 1,
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $${ctx.raw}M` } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 }, callback: v => `$${v}M` } }
+      }
+    }
+  });
+}
+
+// Radar
+function buildRadar() {
+  const axes = ['Recency','Frequency','Monetary','Loyalty','Growth Potential'];
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: axes,
+      datasets: SEGS.map(s => ({
+        label: s.label,
+        data: s.rfm,
+        borderColor: s.color,
+        backgroundColor: s.color + '18',
+        borderWidth: 1.5,
+        pointRadius: 3,
+        pointBackgroundColor: s.color,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#8b91a6', font: { size: 10 }, boxWidth: 10, padding: 12 } } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          angleLines: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { display: false },
+          pointLabels: { color: '#8b91a6', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+// Scatter
+function buildScatter() {
+  const SCATTER_DATA = {
+    champions:    [{x:88,y:4820,r:18},{x:82,y:5100,r:16},{x:91,y:4500,r:15},{x:85,y:5400,r:20},{x:78,y:4200,r:13}],
+    loyal:        [{x:65,y:2340,r:13},{x:72,y:2600,r:11},{x:60,y:2100,r:12},{x:68,y:2800,r:14},{x:55,y:1900,r:10}],
+    potential:    [{x:42,y:1180,r:10},{x:55,y:1350,r:11},{x:38,y:980,r:9},{x:48,y:1500,r:12},{x:52,y:1100,r:9}],
+    atrisk:       [{x:32,y:1890,r:11},{x:22,y:2100,r:10},{x:38,y:1600,r:9},{x:28,y:2400,r:12},{x:18,y:1800,r:8}],
+    newcustomers: [{x:68,y:620,r:7},{x:75,y:580,r:6},{x:62,y:700,r:7},{x:80,y:550,r:6},{x:72,y:650,r:7}],
+  };
+
+  const legendEl = document.getElementById('scatterLegend');
+  legendEl.innerHTML = SEGS.map(s => `
+    <div class="legend-item" onclick="toggleScatterFilter('${s.id}',this)" id="scf-${s.id}">
+      <div class="legend-dot" style="background:${s.color}"></div>${s.icon} ${s.label}
+    </div>`).join('');
+
+  const datasets = SEGS.map(s => ({
+    label: s.label,
+    data: SCATTER_DATA[s.id].map(p => ({ x: p.x, y: p.y, r: p.r })),
+    backgroundColor: s.color + 'aa',
+    borderColor: s.color,
+    borderWidth: 1,
+  }));
+
+  window._scatterChart = new Chart(document.getElementById('scatterCanvas'), {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 10, right: 20, bottom: 10, left: 10 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const seg = SEGS[ctx.datasetIndex];
+              return ` ${seg.label} · Freq: ${ctx.raw.x} · Spend: $${ctx.raw.y.toLocaleString()}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Purchase Frequency (orders/yr)', color: '#555c74', font: { size: 10 } },
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#555c74', font: { size: 10 } }
+        },
+        y: {
+          title: { display: true, text: 'Average Spend ($)', color: '#555c74', font: { size: 10 } },
+          min: 0, max: 6500,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#555c74', font: { size: 10 }, callback: v => `$${v.toLocaleString()}` }
+        }
+      }
+    }
+  });
+}
+
+window.toggleScatterFilter = function(id, el) {
+  scatterFilter = scatterFilter === id ? null : id;
+  const chart = window._scatterChart;
+  chart.data.datasets.forEach((ds, i) => {
+    const seg = SEGS[i];
+    ds.backgroundColor = scatterFilter === null || seg.id === scatterFilter ? seg.color + 'aa' : seg.color + '22';
+    ds.borderColor = scatterFilter === null || seg.id === scatterFilter ? seg.color : seg.color + '44';
+  });
+  chart.update();
+  document.querySelectorAll('[id^="scf-"]').forEach(el2 => {
+    const segId = el2.id.replace('scf-','');
+    el2.style.opacity = scatterFilter === null || segId === scatterFilter ? '1' : '0.35';
+  });
+};
+
+// Bubble (recency vs monetary)
+function buildBubble() {
+  const datasets = SEGS.map(s => ({
+    label: s.label,
+    data: [{ x: s.recency, y: s.spend, r: s.freq * 3 }],
+    backgroundColor: s.color + 'bb',
+    borderColor: s.color,
+    borderWidth: 1.5,
+  }));
+  new Chart(document.getElementById('bubbleChart'), {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: 20 },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b91a6', font: { size: 10 }, boxWidth: 10, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label} · Recency: ${ctx.raw.x}d · Spend: $${ctx.raw.y.toLocaleString()}` } }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Recency (days since last purchase)', color: '#555c74', font: { size: 10 } },
+          min: -10, max: 100,
+          grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } }
+        },
+        y: {
+          title: { display: true, text: 'Average Order Spend ($)', color: '#555c74', font: { size: 10 } },
+          min: 0, max: 6000,
+          grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 }, callback: v => `$${v.toLocaleString()}` }
+        }
+      }
+    }
+  });
+}
+
+// Heatmap (simulated with bar chart matrix)
+function buildHeatmap() {
+  const labels = CATEGORIES.map(c => c.cat);
+  const datasets = SEGS.map(s => ({
+    label: s.label,
+    data: CATEGORIES.map(c => c[s.id]),
+    backgroundColor: s.color + 'bb',
+    borderColor: s.color,
+    borderWidth: 0,
+    barThickness: 26,
+  }));
+  new Chart(document.getElementById('heatmapChart'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b91a6', font: { size: 10 }, boxWidth: 10, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 }, callback: v => `${v}%` } }
+      }
+    }
+  });
+}
+
+// Trend line
+function buildTrend() {
+  const labels = MONTHLY.map(m => m.m);
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: SEGS.map(s => ({
+        label: s.label,
+        data: MONTHLY.map(m => m[s.id]),
+        borderColor: s.color,
+        backgroundColor: s.color + '18',
+        borderWidth: 2,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        pointBackgroundColor: s.color,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#8b91a6', font: { size: 10 }, boxWidth: 10, padding: 10 } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// Spend trend
+function buildSpendTrend() {
+  const SPEND_DATA = {
+    champions:    [4620,4680,4720,4780,4800,4820],
+    loyal:        [2180,2210,2260,2300,2320,2340],
+    potential:    [1050,1080,1100,1120,1160,1180],
+    atrisk:       [2100,2050,2000,1960,1920,1890],
+    newcustomers: [590,600,605,610,615,620],
+  };
+  new Chart(document.getElementById('spendTrend'), {
+    type: 'line',
+    data: {
+      labels: MONTHLY.map(m => m.m),
+      datasets: SEGS.map(s => ({
+        label: s.label,
+        data: SPEND_DATA[s.id],
+        borderColor: s.color,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        tension: 0.4,
+        pointRadius: 2,
+        pointBackgroundColor: s.color,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#555c74', font: { size: 10 }, callback: v => `$${v.toLocaleString()}` } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
